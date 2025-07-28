@@ -98,7 +98,12 @@ class LoggableBehavior extends Behavior
 
         // If no difference then WHY?
         // There is some kind of problem here that means "0" and 1 do not diff for array_diff so beware: stackoverflow.com/questions/12004231/php-array-diff-weirdness :S
-        if (count(array_diff_assoc($newattributes, $oldattributes)) <= 0)
+        
+        // Prepare arrays for comparison by converting any nested arrays to JSON strings
+        $normalizedNew = $this->normalizeAttributesForComparison($newattributes);
+        $normalizedOld = $this->normalizeAttributesForComparison($oldattributes);
+        
+        if (count(array_diff_assoc($normalizedNew, $normalizedOld)) <= 0)
             return;
 
         // If this is a new record lets add a CREATE notification
@@ -189,5 +194,25 @@ class LoggableBehavior extends Behavior
     {
         $pk = $this->owner->getPrimaryKey();
         return is_array($pk) ? json_encode($pk) : $pk;
+    }
+    
+    /**
+     * Normalizes attribute arrays for comparison by converting any nested arrays to JSON strings
+     * to prevent "Array to string conversion" errors in array_diff_assoc()
+     * 
+     * @param array $attributes The attributes array to normalize
+     * @return array The normalized attributes array
+     */
+    protected function normalizeAttributesForComparison($attributes)
+    {
+        $normalized = [];
+        foreach ($attributes as $key => $value) {
+            if (is_array($value)) {
+                $normalized[$key] = json_encode($value);
+            } else {
+                $normalized[$key] = $value;
+            }
+        }
+        return $normalized;
     }
 }
